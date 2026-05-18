@@ -41,10 +41,15 @@ class MwaaServerlessWorkflowRunSensor(AwsBaseSensor[AwsBaseHook]):
     :param success_states: Set of states considered successful. Default: ``{"SUCCESS"}``.
     :param failure_states: Set of states that raise an exception.
         Default: ``{"FAILED", "TIMEOUT", "STOPPED"}``.
+    :param get_workflow_run_kwargs: Extra arguments passed directly to the
+        ``GetWorkflowRun`` API call. (templated)
     """
 
     aws_hook_class = AwsBaseHook
-    template_fields: tuple[str, ...] = aws_template_fields("workflow_arn", "run_id")
+    template_fields: tuple[str, ...] = aws_template_fields(
+        "workflow_arn", "run_id", "get_workflow_run_kwargs"
+    )
+    template_fields_renderers = {"get_workflow_run_kwargs": "json"}
 
     def __init__(
         self,
@@ -53,6 +58,7 @@ class MwaaServerlessWorkflowRunSensor(AwsBaseSensor[AwsBaseHook]):
         run_id: str,
         success_states: set[str] | None = None,
         failure_states: set[str] | None = None,
+        get_workflow_run_kwargs: dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -60,13 +66,16 @@ class MwaaServerlessWorkflowRunSensor(AwsBaseSensor[AwsBaseHook]):
         self.run_id = run_id
         self.success_states = success_states or {"SUCCESS"}
         self.failure_states = failure_states or {"FAILED", "TIMEOUT", "STOPPED"}
+        self.get_workflow_run_kwargs = get_workflow_run_kwargs or {}
 
     @property
     def _hook_parameters(self) -> dict[str, Any]:
         return {**super()._hook_parameters, "client_type": "mwaa-serverless"}
 
     def poke(self, context: Context) -> bool:
-        response = self.hook.conn.get_workflow_run(WorkflowArn=self.workflow_arn, RunId=self.run_id)
+        response = self.hook.conn.get_workflow_run(
+            WorkflowArn=self.workflow_arn, RunId=self.run_id, **self.get_workflow_run_kwargs
+        )
         state = response["RunDetail"]["RunState"]
         self.log.info("Workflow run %s state: %s", self.run_id, state)
 

@@ -80,5 +80,25 @@ class TestMwaaServerlessWorkflowRunSensor:
 
         assert sensor.poke({}) is True
 
+    @mock.patch.object(AwsBaseHook, "conn", new_callable=mock.PropertyMock)
+    def test_poke_with_extra_kwargs(self, mock_conn):
+        sensor = MwaaServerlessWorkflowRunSensor(
+            task_id="wait_for_run",
+            workflow_arn=WORKFLOW_ARN,
+            run_id=RUN_ID,
+            get_workflow_run_kwargs={"SomeNewParam": "value"},
+        )
+        mock_client = mock.MagicMock()
+        mock_client.get_workflow_run.return_value = {"RunDetail": {"RunState": "SUCCESS", "ErrorMessage": ""}}
+        mock_conn.return_value = mock_client
+
+        sensor.poke({})
+
+        mock_client.get_workflow_run.assert_called_once_with(
+            WorkflowArn=WORKFLOW_ARN,
+            RunId=RUN_ID,
+            SomeNewParam="value",
+        )
+
     def test_template_fields(self):
         validate_template_fields(self.sensor)

@@ -46,14 +46,17 @@ class MwaaServerlessStartWorkflowRunOperator(AwsBaseOperator[AwsBaseHook]):
     :param workflow_arn: The ARN of the workflow to run. (templated)
     :param override_parameters: Optional parameters to override defaults for this run. (templated)
     :param workflow_version: Optional version of the workflow to execute. (templated)
+    :param start_workflow_run_kwargs: Extra arguments passed directly to the
+        ``StartWorkflowRun`` API call. (templated)
     """
 
     template_fields: tuple[str, ...] = aws_template_fields(
         "workflow_arn",
         "override_parameters",
         "workflow_version",
+        "start_workflow_run_kwargs",
     )
-    template_fields_renderers = {"override_parameters": "json"}
+    template_fields_renderers = {"override_parameters": "json", "start_workflow_run_kwargs": "json"}
     aws_hook_class = AwsBaseHook
 
     def __init__(
@@ -62,12 +65,14 @@ class MwaaServerlessStartWorkflowRunOperator(AwsBaseOperator[AwsBaseHook]):
         workflow_arn: str,
         override_parameters: dict[str, Any] | None = None,
         workflow_version: str | None = None,
+        start_workflow_run_kwargs: dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.workflow_arn = workflow_arn
         self.override_parameters = override_parameters
         self.workflow_version = workflow_version
+        self.start_workflow_run_kwargs = start_workflow_run_kwargs or {}
 
     @property
     def _hook_parameters(self) -> dict[str, Any]:
@@ -80,6 +85,7 @@ class MwaaServerlessStartWorkflowRunOperator(AwsBaseOperator[AwsBaseHook]):
                 "WorkflowArn": self.workflow_arn,
                 "OverrideParameters": self.override_parameters,
                 "WorkflowVersion": self.workflow_version,
+                **self.start_workflow_run_kwargs,
             }
         )
         response = self.hook.conn.start_workflow_run(**kwargs)
@@ -103,13 +109,15 @@ class MwaaServerlessCreateWorkflowOperator(AwsBaseOperator[AwsBaseHook]):
     :param tags: Optional tags dict.
     :param if_exists: Behavior when the workflow already exists.
         ``"fail"`` raises an error, ``"skip"`` returns the existing ARN.
+    :param create_workflow_kwargs: Extra arguments passed directly to the
+        ``CreateWorkflow`` API call. (templated)
     """
 
     aws_hook_class = AwsBaseHook
     template_fields: tuple[str, ...] = aws_template_fields(
-        "workflow_name", "definition_s3_location", "role_arn", "description"
+        "workflow_name", "definition_s3_location", "role_arn", "description", "create_workflow_kwargs"
     )
-    template_fields_renderers = {"definition_s3_location": "json"}
+    template_fields_renderers = {"definition_s3_location": "json", "create_workflow_kwargs": "json"}
 
     def __init__(
         self,
@@ -120,6 +128,7 @@ class MwaaServerlessCreateWorkflowOperator(AwsBaseOperator[AwsBaseHook]):
         description: str | None = None,
         tags: dict[str, str] | None = None,
         if_exists: Literal["fail", "skip"] = "skip",
+        create_workflow_kwargs: dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -129,6 +138,7 @@ class MwaaServerlessCreateWorkflowOperator(AwsBaseOperator[AwsBaseHook]):
         self.description = description
         self.tags = tags
         self.if_exists = if_exists
+        self.create_workflow_kwargs = create_workflow_kwargs or {}
 
     @property
     def _hook_parameters(self) -> dict[str, Any]:
@@ -143,6 +153,7 @@ class MwaaServerlessCreateWorkflowOperator(AwsBaseOperator[AwsBaseHook]):
                 "RoleArn": self.role_arn,
                 "Description": self.description,
                 "Tags": self.tags,
+                **self.create_workflow_kwargs,
             }
         )
         try:
@@ -176,13 +187,15 @@ class MwaaServerlessUpdateWorkflowOperator(AwsBaseOperator[AwsBaseHook]):
         ``VersionId`` for the updated YAML definition. (templated)
     :param role_arn: The execution role ARN. (templated)
     :param description: Optional updated description. (templated)
+    :param update_workflow_kwargs: Extra arguments passed directly to the
+        ``UpdateWorkflow`` API call. (templated)
     """
 
     aws_hook_class = AwsBaseHook
     template_fields: tuple[str, ...] = aws_template_fields(
-        "workflow_arn", "definition_s3_location", "role_arn", "description"
+        "workflow_arn", "definition_s3_location", "role_arn", "description", "update_workflow_kwargs"
     )
-    template_fields_renderers = {"definition_s3_location": "json"}
+    template_fields_renderers = {"definition_s3_location": "json", "update_workflow_kwargs": "json"}
 
     def __init__(
         self,
@@ -191,6 +204,7 @@ class MwaaServerlessUpdateWorkflowOperator(AwsBaseOperator[AwsBaseHook]):
         definition_s3_location: dict[str, str],
         role_arn: str,
         description: str | None = None,
+        update_workflow_kwargs: dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -198,6 +212,7 @@ class MwaaServerlessUpdateWorkflowOperator(AwsBaseOperator[AwsBaseHook]):
         self.definition_s3_location = definition_s3_location
         self.role_arn = role_arn
         self.description = description
+        self.update_workflow_kwargs = update_workflow_kwargs or {}
 
     @property
     def _hook_parameters(self) -> dict[str, Any]:
@@ -211,6 +226,7 @@ class MwaaServerlessUpdateWorkflowOperator(AwsBaseOperator[AwsBaseHook]):
                 "DefinitionS3Location": self.definition_s3_location,
                 "RoleArn": self.role_arn,
                 "Description": self.description,
+                **self.update_workflow_kwargs,
             }
         )
         response = self.hook.conn.update_workflow(**kwargs)
@@ -230,21 +246,28 @@ class MwaaServerlessDeleteWorkflowOperator(AwsBaseOperator[AwsBaseHook]):
     :param workflow_arn: The ARN of the workflow to delete. (templated)
     :param workflow_version: Optional specific version to delete. If not specified,
         all versions are deleted. (templated)
+    :param delete_workflow_kwargs: Extra arguments passed directly to the
+        ``DeleteWorkflow`` API call. (templated)
     """
 
     aws_hook_class = AwsBaseHook
-    template_fields: tuple[str, ...] = aws_template_fields("workflow_arn", "workflow_version")
+    template_fields: tuple[str, ...] = aws_template_fields(
+        "workflow_arn", "workflow_version", "delete_workflow_kwargs"
+    )
+    template_fields_renderers = {"delete_workflow_kwargs": "json"}
 
     def __init__(
         self,
         *,
         workflow_arn: str,
         workflow_version: str | None = None,
+        delete_workflow_kwargs: dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.workflow_arn = workflow_arn
         self.workflow_version = workflow_version
+        self.delete_workflow_kwargs = delete_workflow_kwargs or {}
 
     @property
     def _hook_parameters(self) -> dict[str, Any]:
@@ -256,6 +279,7 @@ class MwaaServerlessDeleteWorkflowOperator(AwsBaseOperator[AwsBaseHook]):
             {
                 "WorkflowArn": self.workflow_arn,
                 "WorkflowVersion": self.workflow_version,
+                **self.delete_workflow_kwargs,
             }
         )
         self.hook.conn.delete_workflow(**kwargs)
@@ -272,21 +296,28 @@ class MwaaServerlessStopWorkflowRunOperator(AwsBaseOperator[AwsBaseHook]):
 
     :param workflow_arn: The ARN of the workflow. (templated)
     :param run_id: The ID of the run to stop. (templated)
+    :param stop_workflow_run_kwargs: Extra arguments passed directly to the
+        ``StopWorkflowRun`` API call. (templated)
     """
 
     aws_hook_class = AwsBaseHook
-    template_fields: tuple[str, ...] = aws_template_fields("workflow_arn", "run_id")
+    template_fields: tuple[str, ...] = aws_template_fields(
+        "workflow_arn", "run_id", "stop_workflow_run_kwargs"
+    )
+    template_fields_renderers = {"stop_workflow_run_kwargs": "json"}
 
     def __init__(
         self,
         *,
         workflow_arn: str,
         run_id: str,
+        stop_workflow_run_kwargs: dict[str, Any] | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.workflow_arn = workflow_arn
         self.run_id = run_id
+        self.stop_workflow_run_kwargs = stop_workflow_run_kwargs or {}
 
     @property
     def _hook_parameters(self) -> dict[str, Any]:
@@ -294,7 +325,9 @@ class MwaaServerlessStopWorkflowRunOperator(AwsBaseOperator[AwsBaseHook]):
 
     def execute(self, context: Context) -> str:
         self.log.info("Stopping workflow run %s", self.run_id)
-        response = self.hook.conn.stop_workflow_run(WorkflowArn=self.workflow_arn, RunId=self.run_id)
+        response = self.hook.conn.stop_workflow_run(
+            WorkflowArn=self.workflow_arn, RunId=self.run_id, **self.stop_workflow_run_kwargs
+        )
         status = response["Status"]
         self.log.info("Workflow run %s status: %s", self.run_id, status)
         return status

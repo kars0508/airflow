@@ -81,6 +81,24 @@ class TestMwaaServerlessStartWorkflowRunOperator:
         )
         assert result == RUN_ID
 
+    @mock.patch.object(AwsBaseHook, "conn", new_callable=mock.PropertyMock)
+    def test_execute_with_extra_kwargs(self, mock_conn):
+        op = MwaaServerlessStartWorkflowRunOperator(
+            task_id="start_workflow",
+            workflow_arn=WORKFLOW_ARN,
+            start_workflow_run_kwargs={"ClientToken": "idempotency-token-123"},
+        )
+        mock_client = mock.MagicMock()
+        mock_client.start_workflow_run.return_value = {"RunId": RUN_ID, "Status": "STARTING"}
+        mock_conn.return_value = mock_client
+
+        op.execute({})
+
+        mock_client.start_workflow_run.assert_called_once_with(
+            WorkflowArn=WORKFLOW_ARN,
+            ClientToken="idempotency-token-123",
+        )
+
     def test_template_fields(self):
         validate_template_fields(self.operator)
 
@@ -156,6 +174,32 @@ class TestMwaaServerlessCreateWorkflowOperator:
         with pytest.raises(ClientError, match="ConflictException"):
             op.execute({})
 
+    @mock.patch.object(AwsBaseHook, "conn", new_callable=mock.PropertyMock)
+    def test_execute_with_extra_kwargs(self, mock_conn):
+        op = MwaaServerlessCreateWorkflowOperator(
+            task_id="create_workflow",
+            workflow_name=WORKFLOW_NAME,
+            definition_s3_location=S3_LOCATION,
+            role_arn=ROLE_ARN,
+            create_workflow_kwargs={
+                "NetworkConfiguration": {"SubnetIds": ["subnet-123"]},
+                "EngineVersion": 1,
+            },
+        )
+        mock_client = mock.MagicMock()
+        mock_client.create_workflow.return_value = {"WorkflowArn": WORKFLOW_ARN}
+        mock_conn.return_value = mock_client
+
+        op.execute({})
+
+        mock_client.create_workflow.assert_called_once_with(
+            Name=WORKFLOW_NAME,
+            DefinitionS3Location=S3_LOCATION,
+            RoleArn=ROLE_ARN,
+            NetworkConfiguration={"SubnetIds": ["subnet-123"]},
+            EngineVersion=1,
+        )
+
     def test_template_fields(self):
         validate_template_fields(self.operator)
 
@@ -226,6 +270,36 @@ class TestMwaaServerlessUpdateWorkflowOperator:
         with pytest.raises(ClientError):
             self.operator.execute({})
 
+    @mock.patch.object(AwsBaseHook, "conn", new_callable=mock.PropertyMock)
+    def test_execute_with_extra_kwargs(self, mock_conn):
+        op = MwaaServerlessUpdateWorkflowOperator(
+            task_id="update_workflow",
+            workflow_arn=WORKFLOW_ARN,
+            definition_s3_location=S3_LOCATION,
+            role_arn=ROLE_ARN,
+            update_workflow_kwargs={
+                "NetworkConfiguration": {"SecurityGroupIds": ["sg-123"]},
+                "TriggerMode": "SCHEDULED",
+            },
+        )
+        mock_client = mock.MagicMock()
+        mock_client.update_workflow.return_value = {
+            "WorkflowArn": WORKFLOW_ARN,
+            "WorkflowVersion": "ghi789",
+            "ModifiedAt": "2026-05-15T00:00:00Z",
+        }
+        mock_conn.return_value = mock_client
+
+        op.execute({})
+
+        mock_client.update_workflow.assert_called_once_with(
+            WorkflowArn=WORKFLOW_ARN,
+            DefinitionS3Location=S3_LOCATION,
+            RoleArn=ROLE_ARN,
+            NetworkConfiguration={"SecurityGroupIds": ["sg-123"]},
+            TriggerMode="SCHEDULED",
+        )
+
     def test_template_fields(self):
         validate_template_fields(self.operator)
 
@@ -281,6 +355,24 @@ class TestMwaaServerlessDeleteWorkflowOperator:
         with pytest.raises(ClientError, match="ResourceNotFoundException"):
             self.operator.execute({})
 
+    @mock.patch.object(AwsBaseHook, "conn", new_callable=mock.PropertyMock)
+    def test_execute_with_extra_kwargs(self, mock_conn):
+        op = MwaaServerlessDeleteWorkflowOperator(
+            task_id="delete_workflow",
+            workflow_arn=WORKFLOW_ARN,
+            delete_workflow_kwargs={"SomeNewParam": "value"},
+        )
+        mock_client = mock.MagicMock()
+        mock_client.delete_workflow.return_value = {"WorkflowArn": WORKFLOW_ARN}
+        mock_conn.return_value = mock_client
+
+        op.execute({})
+
+        mock_client.delete_workflow.assert_called_once_with(
+            WorkflowArn=WORKFLOW_ARN,
+            SomeNewParam="value",
+        )
+
     def test_template_fields(self):
         validate_template_fields(self.operator)
 
@@ -320,6 +412,26 @@ class TestMwaaServerlessStopWorkflowRunOperator:
 
         with pytest.raises(ClientError):
             self.operator.execute({})
+
+    @mock.patch.object(AwsBaseHook, "conn", new_callable=mock.PropertyMock)
+    def test_execute_with_extra_kwargs(self, mock_conn):
+        op = MwaaServerlessStopWorkflowRunOperator(
+            task_id="stop_run",
+            workflow_arn=WORKFLOW_ARN,
+            run_id=RUN_ID,
+            stop_workflow_run_kwargs={"SomeNewParam": "value"},
+        )
+        mock_client = mock.MagicMock()
+        mock_client.stop_workflow_run.return_value = {"Status": "STOPPING"}
+        mock_conn.return_value = mock_client
+
+        op.execute({})
+
+        mock_client.stop_workflow_run.assert_called_once_with(
+            WorkflowArn=WORKFLOW_ARN,
+            RunId=RUN_ID,
+            SomeNewParam="value",
+        )
 
     def test_template_fields(self):
         validate_template_fields(self.operator)
